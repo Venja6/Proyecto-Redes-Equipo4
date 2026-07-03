@@ -3,7 +3,7 @@ import random
 import time
 import json
 import urllib.request
-
+import ssl
 @dataclass
 class dato:
     """
@@ -96,17 +96,20 @@ while True:
     datos_en_bytes = mensaje_json.encode('utf-8')
 
     # Destino: Servidor central en la máquina virtual Ubuntu
-    url = "http://192.168.1.12:5006/datos"
+    url = "https://192.168.1.12:5006/datos"
 
     # Estructuración de la petición HTTP POST
     peticion = urllib.request.Request(url, data=datos_en_bytes, method='POST')
     peticion.add_header('Content-Type', 'application/json')
     
     try:
+
+        contexto_seguro = ssl._create_unverified_context()
+
         # Ejecución del envío
-        respuesta = urllib.request.urlopen(peticion)
+        respuesta = urllib.request.urlopen(peticion, context=contexto_seguro)
         if respuesta.status == 200:
-            print("Datos enviados con éxito vía HTTP.")
+            print("Datos enviados con éxito vía HTTPS.")
         else:
             print(f"El servidor respondió con código: {respuesta.status}")
             
