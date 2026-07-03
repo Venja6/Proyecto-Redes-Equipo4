@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 import random
 import time
-import socket, json
+import json
+import urllib.request
 
 @dataclass
 class dato:
@@ -15,9 +16,6 @@ temperatura_ambiente = dato(23, "C°")
 radiacion_solar = dato(30000, "lux")
 humedad_suelo = dato(55.0, "%")
 pH_agua = dato(5.5, "pH")
-
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.connect(("127.0.0.1", 5006))
 
 tipo = input("Modo automatico = 0 / Modo manual para probar eventos = 1")
 
@@ -66,14 +64,26 @@ while(True):
         elif sensor.valor > limite_superior[i]:
             print(f"ALERTA: {nombres[i]} fuera de rango superior: {sensor.valor} {sensor.tipo}")
             
-    mensaje = json.dumps(paquete_datos) + "\n"
+    mensaje_json = json.dumps(paquete_datos)
+    datos_en_bytes = mensaje_json.encode('utf-8')
+
+    url = "http://192.168.1.12:5006/datos"
+
+    peticion = urllib.request.Request(url, data=datos_en_bytes, method='POST')
+
+    peticion.add_header('Content-Type', 'application/json')
+    
     
     try:
-        sock.sendall(mensaje.encode('utf-8'))
-        print("Datos enviados con éxito.")
-    except ConnectionError:
-        print("Se perdió la conexión con el servidor.")
-        break
+        respuesta = urllib.request.urlopen(peticion)
+        if respuesta.status == 200:
+            print("Datos enviados con éxito vía HTTP.")
+        else:
+            print(f"El servidor respondió con código: {respuesta.status}")
+            
+    except urllib.error.URLError as e:
+        print(f"Fallo al conectar con el servidor: {e.reason}")
+        
             
     for i in range(len(valores)):
         sensor = valores[i]
