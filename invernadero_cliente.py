@@ -52,11 +52,21 @@ while True:
     # --- B. Empaquetado de Datos ---
     # Construcción del diccionario base que se enviará al servidor
     paquete_datos = {}
+    estado_general = "OK"
     for i in range(len(valores)):
+        sensor = valores[i]
         paquete_datos[nombres[i]] = {
-            "valor": valores[i].valor,
-            "tipo": valores[i].tipo
+            "valor": sensor.valor,
+            "tipo": sensor.tipo
         }
+        if sensor.valor < limite_inferior[i] or sensor.valor > limite_superior[i]:
+            estado_general = "ALERTA"
+    
+    carga_util = {
+        "token_acceso": "udec_redes_2026", # Nuestra contraseña básica
+        "estado": estado_general,
+        "sensores": paquete_datos
+    }
         
     # --- C. Inyección de Anomalías (Modo Manual) ---
     if tipo == "1":
@@ -92,7 +102,8 @@ while True:
             
     # --- E. Transmisión HTTP ---
     # Codificación a formato JSON y conversión a bytes para transmisión por red
-    mensaje_json = json.dumps(paquete_datos)
+    
+    mensaje_json = json.dumps(carga_util)
     datos_en_bytes = mensaje_json.encode('utf-8')
 
     # Destino: Servidor central en la máquina virtual Ubuntu
