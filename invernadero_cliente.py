@@ -4,6 +4,7 @@ import time
 import json
 import urllib.request
 import ssl
+
 @dataclass
 class dato:
     """
@@ -50,22 +51,29 @@ while True:
     limite_superior = [90, 2500, 35, 50000, 85, 7.5]
     
     # --- B. Empaquetado de Datos ---
-    # Construcción del diccionario base que se enviará al servidor
+    # Construcción del diccionario base de sensores
     paquete_datos = {}
+    
+    # Se asume un estado normal por defecto. 
+    # Actuando como un nodo de Edge Computing, se pre-valida el estado general.
     estado_general = "OK"
+    
     for i in range(len(valores)):
         sensor = valores[i]
         paquete_datos[nombres[i]] = {
             "valor": sensor.valor,
             "tipo": sensor.tipo
         }
+        # Validación de umbrales locales: Si un sensor registra valores atípicos, se marca la alerta
         if sensor.valor < limite_inferior[i] or sensor.valor > limite_superior[i]:
             estado_general = "ALERTA"
     
+    # Estructuración de la carga útil (Payload) final que será enviada
+    # Se integra el mecanismo de control de acceso y el estado de alerta del nodo
     carga_util = {
-        "token_acceso": "udec_redes_2026", # Nuestra contraseña básica
-        "estado": estado_general,
-        "sensores": paquete_datos
+        "token_acceso": "udec_redes_2026", # Contraseña estática de autenticación para el servidor
+        "estado": estado_general,          # Notificación anticipada de crisis ("OK" o "ALERTA")
+        "sensores": paquete_datos          # Conjunto de las mediciones recopiladas
     }
         
     # --- C. Inyección de Anomalías (Modo Manual) ---
@@ -100,24 +108,24 @@ while True:
         elif sensor.valor > limite_superior[i]:
             print(f"ALERTA: {nombres[i]} fuera de rango superior: {sensor.valor} {sensor.tipo}")
             
-    # --- E. Transmisión HTTP ---
-    # Codificación a formato JSON y conversión a bytes para transmisión por red
-    
+    # --- E. Transmisión HTTPS ---
+    # Codificación de la carga útil a formato JSON y conversión a bytes para transmisión por red cifrada
     mensaje_json = json.dumps(carga_util)
     datos_en_bytes = mensaje_json.encode('utf-8')
 
-    # Destino: Servidor central en la máquina virtual Ubuntu
+    # Destino: Servidor central protegido en la máquina virtual Ubuntu
     url = "https://192.168.1.12:5006/datos"
 
-    # Estructuración de la petición HTTP POST
+    # Estructuración de las cabeceras de la petición HTTP POST
     peticion = urllib.request.Request(url, data=datos_en_bytes, method='POST')
     peticion.add_header('Content-Type', 'application/json')
     
     try:
-
+        # Creación del contexto de seguridad SSL
+        # Permite al cliente confiar en el certificado autofirmado del servidor de pruebas
         contexto_seguro = ssl._create_unverified_context()
 
-        # Ejecución del envío
+        # Ejecución del envío de datos envolviendo la conexión en el túnel TLS
         respuesta = urllib.request.urlopen(peticion, context=contexto_seguro)
         if respuesta.status == 200:
             print("Datos enviados con éxito vía HTTPS.")
