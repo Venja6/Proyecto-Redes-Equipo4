@@ -35,13 +35,12 @@ tipo = input("Seleccione modo (0 = Automático, 1 = Manual para inyectar crisis)
 
 while True:
     # --- A. Simulación de fluctuaciones ambientales ---
-    # Se aplican pequeñas variaciones aleatorias para simular un entorno natural
-    humedad_ambiente.valor += (random.randint(1, 2) * random.choice([1, -1]))
-    co2.valor += (random.randint(0, 100) * random.choice([1, -1]))
+    humedad_ambiente.valor = max(0.0, min(100.0, humedad_ambiente.valor + (random.randint(1, 2) * random.choice([1, -1]))))
+    co2.valor = max(0, co2.valor + (random.randint(0, 100) * random.choice([1, -1])))
     temperatura_ambiente.valor += (1 * random.choice([1, -1]))
-    radiacion_solar.valor += (random.randint(0, 5000) * random.choice([1, -1]))
-    humedad_suelo.valor += (random.randint(1, 2) * random.choice([1, -1]))
-    pH_agua.valor = round(pH_agua.valor + (0.1 * random.choice([1, -1])), 1)
+    radiacion_solar.valor = max(0, radiacion_solar.valor + (random.randint(0, 2000) * random.choice([1, -1])))
+    humedad_suelo.valor = max(0.0, min(100.0, humedad_suelo.valor + (random.randint(1, 2) * random.choice([1, -1]))))
+    pH_agua.valor = max(0.0, min(14.0, round(pH_agua.valor + (0.1 * random.choice([1, -1])), 1)))
     
     nombres = ["Humedad Amb.", "CO2", "Temp. Amb.", "Radiación", "Humedad Suelo", "pH Agua"]
     valores = [humedad_ambiente, co2, temperatura_ambiente, radiacion_solar, humedad_suelo, pH_agua]
@@ -49,6 +48,7 @@ while True:
     # Límites operativos normales de las variables del invernadero
     limite_inferior = [35, 300,  10, 10000, 20, 4.5]
     limite_superior = [90, 2500, 35, 50000, 85, 7.5]
+    valores_nominales = [65, 1000,  22, 25000, 50, 6.0]
     
     # --- B. Empaquetado de Datos ---
     # Construcción del diccionario base de sensores
@@ -62,7 +62,8 @@ while True:
         sensor = valores[i]
         paquete_datos[nombres[i]] = {
             "valor": sensor.valor,
-            "tipo": sensor.tipo
+            "tipo": sensor.tipo,
+            "critico": sensor.valor < limite_inferior[i] or sensor.valor > limite_superior[i]
         }
         # Validación de umbrales locales: Si un sensor registra valores atípicos, se marca la alerta
         if sensor.valor < limite_inferior[i] or sensor.valor > limite_superior[i]:
@@ -114,7 +115,7 @@ while True:
     datos_en_bytes = mensaje_json.encode('utf-8')
 
     # Destino: Servidor central protegido en la máquina virtual Ubuntu
-    url = "https://192.168.1.12:5006/datos"
+    url = "https://192.168.1.138:5006/datos"
 
     # Estructuración de las cabeceras de la petición HTTP POST
     peticion = urllib.request.Request(url, data=datos_en_bytes, method='POST')
@@ -129,6 +130,18 @@ while True:
         respuesta = urllib.request.urlopen(peticion, context=contexto_seguro)
         if respuesta.status == 200:
             print("Datos enviados con éxito vía HTTPS.")
+            cuerpo_respuesta = respuesta.read().decode('utf-8')
+            datos_respuesta = json.loads(cuerpo_respuesta)
+            
+            if "comandos" in datos_respuesta:
+                comandos = datos_respuesta["comandos"]
+                
+                # Buscar qué sensor requiere corrección y restaurar su valor nominal
+                for sensor_a_corregir, accion in comandos.items():
+                    if accion == "CORREGIR_VALOR" and sensor_a_corregir in nombres:
+                        idx = nombres.index(sensor_a_corregir)
+                        valores[idx].valor = valores_nominales[idx] # Corregir SOLO el valor malo
+                        print(f"{sensor_a_corregir} reconfigurado exitosamente a un valor seguro: {valores[idx].valor}")
         else:
             print(f"El servidor respondió con código: {respuesta.status}")
             
