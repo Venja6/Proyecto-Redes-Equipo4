@@ -2,10 +2,11 @@ from flask import Flask, request, jsonify, render_template_string
 from datetime import datetime
 
 app = Flask(__name__)
-
+# Almacenamiento en memoria para el historial reciente de lecturas.
 historial_datos = []
 # Diccionario para almacenar comandos destinados al nodo Edge (ej: {"sensor_afectado": "accion"})
 comandos_pendientes = {} 
+# Límite de registros a mantener en memoria para optimizar el rendimiento.
 MAX_REGISTROS = 30
 
 @app.route('/datos', methods=['POST'])
@@ -32,7 +33,7 @@ def recibir_datos():
         for nombre, datos_sensor in sensores.items():
             registro["sensores"][nombre] = f"{datos_sensor['valor']} {datos_sensor['tipo']}"
             # Si el estado es ALERTA, intentamos deducir cuál es el sensor fallando 
-            # (En un entorno real, el cliente te diría explícitamente cuál está mal)
+            # (En un entorno real, el cliente diría explícitamente cuál está mal)
             if estado_general == "ALERTA" and datos_sensor.get("critico") == True:
                 registro["sensor_alerta"] = nombre
 
@@ -64,12 +65,12 @@ def enviar_solucion():
         return jsonify({"status": "ok", "message": f"Solución enviada para {sensor}"}), 200
     return jsonify({"status": "error", "message": "No se especificó el sensor"}), 400
 
-
+# Proporciona el historial reciente de los datos almacenados.
 @app.route('/api/historial', methods=['GET'])
 def obtener_historial():
     return jsonify(historial_datos)
 
-
+# Renderiza el dashboard principal.
 @app.route('/', methods=['GET'])
 def index():
     html_dashboard = """
@@ -167,4 +168,5 @@ def index():
     return render_template_string(html_dashboard)
 
 if __name__ == '__main__':
+    # Inicialización del servidor Flask.
     app.run(host='0.0.0.0', port=5006, debug=True, ssl_context='adhoc')
