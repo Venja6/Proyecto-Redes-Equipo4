@@ -58,3 +58,5 @@ __2. Iniciar el Cliente:__ En la máquina host o terminal que actúa como invern
   python invernadero_cliente.py
 ```
 El script solicitará por consola la dirección IP del servidor y el modo de operación (0 = Automático, 1 = Manual para forzar una crisis ambiental).
+
+Nota: Dependiendo de la configuración de su sistema operativo, es posible que deba utilizar python3 (recomendado en la máquina virtual Ubuntu) o py (en el host de Windows) en lugar del comando base python.
