@@ -53,7 +53,7 @@ def recibir_datos():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-# --- NUEVA RUTA: Recibir la orden de reparación desde la interfaz web ---
+# Recibir la orden de reparación desde la interfaz web
 @app.route('/api/solucionar', methods=['POST'])
 def enviar_solucion():
     data = request.get_json()
