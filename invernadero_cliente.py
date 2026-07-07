@@ -28,6 +28,7 @@ humedad_suelo = dato(55.0, "%")
 pH_agua = dato(5.5, "pH")
 
 print("--- Inicializando Nodo Simulado de Invernadero ---")
+ip_servidor = input("Ingrese la dirección IP del servidor (ej. 192.168.1.138): ")
 tipo = input("Seleccione modo (0 = Automático, 1 = Manual para inyectar crisis): ")
 
 
@@ -115,7 +116,7 @@ while True:
     datos_en_bytes = mensaje_json.encode('utf-8')
 
     # Destino: Servidor central protegido en la máquina virtual Ubuntu
-    url = "https://192.168.1.138:5006/datos"
+    url = f"https://{ip_servidor}:5006/datos"
 
     # Estructuración de las cabeceras de la petición HTTP POST
     peticion = urllib.request.Request(url, data=datos_en_bytes, method='POST')
